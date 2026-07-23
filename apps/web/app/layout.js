@@ -2,8 +2,8 @@ import "./globals.css";
 
 export const metadata = {
   title: {
-    default: "Blankroom — a live page for shared words",
-    template: "%s · Blankroom",
+    default: "PageRelay — a live page for shared words",
+    template: "%s · PageRelay",
   },
   description:
     "Create a private live notepad, share the link, and write together in real time.",

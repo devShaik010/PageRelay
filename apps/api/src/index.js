@@ -258,7 +258,7 @@ io.on("connection", (socket) => {
 
 await ensureSchema();
 server.listen(port, "0.0.0.0", () => {
-  console.log(`Blankroom API listening on ${port}`);
+  console.log(`PageRelay API listening on ${port}`);
 });
 
 async function shutdown() {

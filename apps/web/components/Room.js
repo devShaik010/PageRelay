@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import getCaretCoordinates from "textarea-caret";
 import * as Y from "yjs";
-import { Copy, Exit, Menu, Users } from "./Icons";
+import { Check, Copy, Exit, Menu, Users } from "./Icons";
 import Logo from "./Logo";
 import ProfileAvatar from "./ProfileAvatar";
 
@@ -68,6 +68,7 @@ export default function Room({ code }) {
   const [creatorToken, setCreatorToken] = useState("");
   const [endedAt, setEndedAt] = useState(null);
   const [notice, setNotice] = useState("");
+  const [copyStatus, setCopyStatus] = useState("idle");
   const [error, setError] = useState("");
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -123,8 +124,14 @@ export default function Room({ code }) {
   }, [content, refreshCursorPositions]);
 
   useEffect(() => {
-    const savedToken = localStorage.getItem(`blankroom:creator:${code}`) || "";
-    const savedName = localStorage.getItem(`blankroom:name:${code}`) || "";
+    const savedToken =
+      localStorage.getItem(`pagerelay:creator:${code}`) ||
+      localStorage.getItem(`blankroom:creator:${code}`) ||
+      "";
+    const savedName =
+      localStorage.getItem(`pagerelay:name:${code}`) ||
+      localStorage.getItem(`blankroom:name:${code}`) ||
+      "";
     setCreatorToken(savedToken);
     setJoinName(savedName);
     if (savedName) setName(savedName);
@@ -231,7 +238,7 @@ export default function Room({ code }) {
     event.preventDefault();
     const cleanName = joinName.trim();
     if (!cleanName) return;
-    localStorage.setItem(`blankroom:name:${code}`, cleanName);
+    localStorage.setItem(`pagerelay:name:${code}`, cleanName);
     setName(cleanName);
   }
 
@@ -244,13 +251,48 @@ export default function Room({ code }) {
   }
 
   async function copyLink() {
+    const shareLink = window.location.href;
+    let copied = false;
+
     try {
-      await navigator.clipboard.writeText(window.location.href);
-      setNotice("Share link copied.");
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(shareLink);
+        copied = true;
+      }
     } catch {
+      copied = false;
+    }
+
+    if (!copied) {
+      const temporaryInput = document.createElement("textarea");
+      const previouslyFocused = document.activeElement;
+      try {
+        temporaryInput.value = shareLink;
+        temporaryInput.setAttribute("readonly", "");
+        temporaryInput.style.position = "fixed";
+        temporaryInput.style.opacity = "0";
+        document.body.appendChild(temporaryInput);
+        temporaryInput.select();
+        copied = document.execCommand("copy");
+      } catch {
+        copied = false;
+      } finally {
+        temporaryInput.remove();
+        previouslyFocused?.focus();
+      }
+    }
+
+    if (copied) {
+      setCopyStatus("copied");
+      setNotice("Share link copied.");
+    } else {
+      setCopyStatus("failed");
       setNotice("Copy the link from your browser address bar.");
     }
-    window.setTimeout(() => setNotice(""), 2400);
+    window.setTimeout(() => {
+      setCopyStatus("idle");
+      setNotice("");
+    }, 2400);
   }
 
   async function endCurrentSession() {
@@ -318,7 +360,7 @@ export default function Room({ code }) {
               </div>
               <a className="popover-home-link" href="/">
                 <Logo compact />
-                <span>Back to Blankroom</span>
+                <span>Back to PageRelay</span>
               </a>
             </section>
           )}
@@ -375,9 +417,22 @@ export default function Room({ code }) {
             )}
           </div>
 
-          <button className="floating-icon-button" onClick={copyLink} type="button" aria-label="Copy session link" title="Copy link">
-            <Copy />
-          </button>
+          <div className="floating-control-wrap copy-control">
+            <button
+              className={`floating-icon-button copy-link-button ${copyStatus === "copied" ? "is-copied" : ""}`}
+              onClick={copyLink}
+              type="button"
+              aria-label={copyStatus === "copied" ? "Session link copied" : "Copy session link"}
+              title={copyStatus === "copied" ? "Copied" : "Copy link"}
+            >
+              {copyStatus === "copied" ? <Check /> : <Copy />}
+            </button>
+            {copyStatus !== "idle" && (
+              <span className={`copy-feedback ${copyStatus === "failed" ? "is-error" : ""}`} role="status">
+                {copyStatus === "copied" ? "Link copied" : "Use address bar"}
+              </span>
+            )}
+          </div>
 
           {creatorToken && (
             <button

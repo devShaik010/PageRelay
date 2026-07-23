@@ -1,4 +1,4 @@
-# Blankroom
+# PageRelay
 
 A small, link-based live notepad. Create a session, share its unique URL, edit
 together in real time, and let the session creator close the room when the work
@@ -33,4 +33,3 @@ npm --prefix apps/api install
 npm --prefix apps/web install
 DATABASE_URL=postgresql://blankroom:blankroom_local@localhost:5432/blankroom npm run dev
 ```
-

@@ -99,8 +99,8 @@ export default function Home() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not create the session");
 
-      localStorage.setItem(`blankroom:creator:${data.code}`, data.creatorToken);
-      localStorage.setItem(`blankroom:name:${data.code}`, creatorName.trim());
+      localStorage.setItem(`pagerelay:creator:${data.code}`, data.creatorToken);
+      localStorage.setItem(`pagerelay:name:${data.code}`, creatorName.trim());
       const destination = `/r/${data.code}`;
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         router.push(destination);
@@ -175,7 +175,7 @@ export default function Home() {
           <div className="collab-flow" aria-hidden="true">
             <div className="demo-person person-a">
               <span className="demo-avatar profile-color-0">
-                <ProfileAvatar seed="Blankroom creator" size={34} decorative />
+                <ProfileAvatar seed="PageRelay creator" size={34} decorative />
               </span>
               <span className="person-name">You</span>
               <span className="online-label"><i /> Online</span>
@@ -184,12 +184,12 @@ export default function Home() {
               <span className="rail-line" />
               <span className="travel-link">
                 <span className="link-glyph">↗</span>
-                blankroom.live
+                pagerelay.link
               </span>
             </div>
             <div className="demo-person person-b">
               <span className="demo-avatar profile-color-1">
-                <ProfileAvatar seed="Blankroom teammate" size={34} decorative />
+                <ProfileAvatar seed="PageRelay teammate" size={34} decorative />
               </span>
               <span className="person-name">Teammate</span>
               <span className="online-label"><i /> Online</span>
@@ -204,10 +204,10 @@ export default function Home() {
               </div>
               <div className="demo-presence">
                 <span className="profile-color-0">
-                  <ProfileAvatar seed="Blankroom creator" size={20} decorative />
+                  <ProfileAvatar seed="PageRelay creator" size={20} decorative />
                 </span>
                 <span className="profile-color-1">
-                  <ProfileAvatar seed="Blankroom teammate" size={20} decorative />
+                  <ProfileAvatar seed="PageRelay teammate" size={20} decorative />
                 </span>
               </div>
             </div>
@@ -237,7 +237,7 @@ export default function Home() {
       </section>
 
       <footer className="home-footer" data-od-id="footer">
-        <span>Blankroom</span>
+        <span>PageRelay</span>
         <span>Write · share · close</span>
       </footer>
 

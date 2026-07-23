@@ -1106,6 +1106,36 @@ p {
   opacity: 0.45;
 }
 
+.copy-link-button.is-copied {
+  border-color: color-mix(in oklab, var(--success), transparent 66%);
+  background: color-mix(in oklab, var(--success), var(--bg) 92%);
+  color: var(--success);
+}
+
+.copy-feedback {
+  position: absolute;
+  top: calc(100% + 9px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 1px solid var(--glass-border);
+  border-radius: 9999px;
+  background: var(--glass);
+  padding: 5px 9px;
+  box-shadow: var(--elev-raised);
+  color: var(--fg-2);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  backdrop-filter: blur(16px);
+  animation: popover-in 180ms var(--ease-standard);
+  pointer-events: none;
+}
+
+.copy-feedback.is-error {
+  color: var(--danger);
+}
+
 .floating-status {
   display: flex;
   min-height: 46px;

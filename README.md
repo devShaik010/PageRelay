@@ -18,6 +18,7 @@ Open [http://localhost:3000](http://localhost:3000). The API is available at
 
 - `web`: Next.js frontend, built as a production standalone image.
 - `api`: Express, Socket.IO, and Yjs real-time service.
+- `gateway`: Same-origin Nginx proxy for the web app, API, and WebSocket traffic.
 - `db`: PostgreSQL 16 with a persistent named volume.
 
 The API creates its schema on startup. Creator secrets are only returned once,

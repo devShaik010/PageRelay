@@ -8,7 +8,16 @@ import { Check, Copy, Exit, Menu, Users } from "./Icons";
 import Logo from "./Logo";
 import ProfileAvatar from "./ProfileAvatar";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const CONFIGURED_API_URL = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
+
+function getApiUrl() {
+  if (CONFIGURED_API_URL) return CONFIGURED_API_URL;
+  if (typeof window === "undefined") return "http://localhost:4000";
+  if (["localhost", "127.0.0.1"].includes(window.location.hostname)) {
+    return `${window.location.protocol}//${window.location.hostname}:4000`;
+  }
+  return window.location.origin;
+}
 
 function toUint8Array(payload) {
   if (payload instanceof ArrayBuffer) return new Uint8Array(payload);
@@ -136,7 +145,7 @@ export default function Room({ code }) {
     setJoinName(savedName);
     if (savedName) setName(savedName);
 
-    fetch(`${API_URL}/api/sessions/${code}`)
+    fetch(`${getApiUrl()}/api/sessions/${code}`)
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "This sheet could not be found");
@@ -151,7 +160,7 @@ export default function Room({ code }) {
 
     const doc = new Y.Doc();
     const text = doc.getText("content");
-    const socket = io(API_URL, { transports: ["websocket", "polling"] });
+    const socket = io(getApiUrl(), { transports: ["websocket", "polling"] });
     docRef.current = doc;
     textRef.current = text;
     socketRef.current = socket;
@@ -298,7 +307,7 @@ export default function Room({ code }) {
   async function endCurrentSession() {
     setError("");
     try {
-      const response = await fetch(`${API_URL}/api/sessions/${code}/end`, {
+      const response = await fetch(`${getApiUrl()}/api/sessions/${code}/end`, {
         method: "POST",
         headers: { authorization: `Bearer ${creatorToken}` },
       });

@@ -7,8 +7,17 @@ import { Arrow } from "./Icons";
 import Logo from "./Logo";
 import ProfileAvatar from "./ProfileAvatar";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const CONFIGURED_API_URL = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
 const DEMO_SENTENCE = "Let’s ship the new onboarding flow on Friday.";
+
+function getApiUrl() {
+  if (CONFIGURED_API_URL) return CONFIGURED_API_URL;
+  if (typeof window === "undefined") return "http://localhost:4000";
+  if (["localhost", "127.0.0.1"].includes(window.location.hostname)) {
+    return `${window.location.protocol}//${window.location.hostname}:4000`;
+  }
+  return window.location.origin;
+}
 
 export default function Home() {
   const router = useRouter();
@@ -91,7 +100,7 @@ export default function Home() {
     setSubmitting(true);
     setError("");
     try {
-      const response = await fetch(`${API_URL}/api/sessions`, {
+      const response = await fetch(`${getApiUrl()}/api/sessions`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ title, creatorName }),

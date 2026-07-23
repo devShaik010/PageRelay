@@ -1,0 +1,21 @@
+{
+  "name": "@blankroom/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "build": "node --check src/index.js && node --check src/store.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "pg": "^8.16.0",
+    "socket.io": "^4.8.1",
+    "yjs": "^13.6.27",
+    "zod": "^4.0.0"
+  }
+}

@@ -1,5 +1,7 @@
 # PageRelay
 
+[![CI](https://github.com/devShaik010/PageRelay/actions/workflows/ci.yml/badge.svg)](https://github.com/devShaik010/PageRelay/actions/workflows/ci.yml)
+
 A small, link-based live notepad. Create a session, share its unique URL, edit
 together in real time, and let the session creator close the room when the work
 is done.
@@ -23,6 +25,25 @@ Open [http://localhost:3000](http://localhost:3000). The API is available at
 
 The API creates its schema on startup. Creator secrets are only returned once,
 stored in the creator's browser, and persisted in PostgreSQL as SHA-256 hashes.
+
+## Published containers
+
+Git tags matching `v*` publish multi-architecture images for AMD64 and ARM64:
+
+- `iamabrar/pagerelay-web:<version>`
+- `iamabrar/pagerelay-api:<version>`
+
+Version `v1` can be deployed with the production Compose file:
+
+```bash
+cp .env.production.example .env
+# Replace POSTGRES_PASSWORD and WEB_ORIGIN in .env.
+docker compose -f compose.production.yml pull
+docker compose -f compose.production.yml up -d
+```
+
+The GitHub repository must define `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`
+as Actions secrets. The release workflow also supports a manual version input.
 
 ## Local development
 

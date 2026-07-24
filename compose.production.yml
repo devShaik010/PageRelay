@@ -1,0 +1,59 @@
+name: pagerelay
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pagerelay}
+      POSTGRES_USER: ${POSTGRES_USER:-pagerelay}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - pagerelay_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pagerelay} -d ${POSTGRES_DB:-pagerelay}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  api:
+    image: iamabrar/pagerelay-api:${PAGERELAY_VERSION:-v1}
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pagerelay}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-pagerelay}
+      WEB_ORIGIN: ${WEB_ORIGIN:?Set WEB_ORIGIN}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 4s
+      retries: 8
+    restart: unless-stopped
+
+  web:
+    image: iamabrar/pagerelay-web:${PAGERELAY_VERSION:-v1}
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  gateway:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./infra/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "${PAGERELAY_PORT:-80}:80"
+    depends_on:
+      web:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  pagerelay_data:

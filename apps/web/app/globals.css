@@ -1,3 +1,6 @@
+@import '../styles/_variables.scss';
+@import '../styles/_keyframe-animations.scss';
+
 :root {
   --bg: #ffffff;
   --surface: #f6f5f4;
@@ -282,8 +285,7 @@ p {
   border-color: var(--fg);
 }
 
-.field input::placeholder,
-.live-editor::placeholder {
+.field input::placeholder {
   color: var(--muted);
   opacity: 0.75;
 }
@@ -1647,89 +1649,18 @@ p {
   opacity: 0.45;
 }
 
-.live-editor {
-  display: block;
-  width: 100%;
-  min-height: calc(100vh - 280px);
-  resize: none;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  caret-color: var(--fg);
-  color: var(--fg);
-  cursor: text;
-  padding:
-    34px
-    max(32px, calc((100vw - 1120px) / 2))
-    120px;
-  font-family: var(--font-body);
-  font-size: 18px;
-  font-weight: 400;
-  letter-spacing: 0.006em;
-  line-height: 1.7;
-}
-
 .editor-canvas {
   position: relative;
 }
 
-.remote-cursors-layer {
-  position: absolute;
-  z-index: 4;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.remote-cursor {
-  position: absolute;
-  width: 1.5px;
-  min-height: 20px;
-  color: var(--profile-color);
-  transform: translateX(3px);
-  transition:
-    top 90ms linear,
-    left 90ms linear;
-}
-
-.remote-cursor > i {
-  position: absolute;
-  inset: 0;
-  border-radius: 999px;
-  background: currentColor;
-  box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--bg), transparent 20%),
-    0 0 0 2px color-mix(in oklab, currentColor, transparent 86%);
-}
-
-.remote-cursor > strong {
-  position: absolute;
-  bottom: calc(100% + 3px);
-  left: -3px;
-  display: flex;
-  align-items: center;
-  max-width: 130px;
-  overflow: hidden;
-  border-radius: 4px 4px 4px 0;
-  background: currentColor;
-  padding: 3px 6px;
-  color: var(--accent-on);
-  font-size: 9px;
-  font-weight: 600;
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.live-editor:focus-visible {
-  box-shadow: none;
-}
-
-.live-editor:disabled {
-  color: var(--fg-2);
-  cursor: default;
-  opacity: 1;
-  -webkit-text-fill-color: var(--fg-2);
+.editor-loading {
+  min-height: calc(100vh - 280px);
+  padding:
+    38px
+    max(32px, calc((100vw - 1120px) / 2))
+    120px;
+  color: var(--meta);
+  font-size: 14px;
 }
 
 .paper-footer {
@@ -2180,18 +2111,15 @@ p {
     padding: 0;
   }
 
-  .live-editor {
-    min-height: calc(100vh - 220px);
-    padding: 28px 22px 100px;
-    font-size: 17px;
-    line-height: 1.7;
-  }
-
   .paper-footer {
     bottom: 10px;
     gap: 14px;
     max-width: calc(100% - 20px);
     padding-inline: 14px;
+  }
+
+  .paper-footer.has-editor-toolbar {
+    bottom: 72px;
   }
 
   .paper-footer span:nth-child(2) {

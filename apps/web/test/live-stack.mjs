@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
 import { io } from "socket.io-client";
 import * as Y from "yjs";
+import {
+  Awareness,
+  applyAwarenessUpdate,
+  encodeAwarenessUpdate,
+} from "y-protocols/awareness";
 
 const apiUrl = process.env.API_URL || "http://127.0.0.1:4000";
+const richContentField = "richContent";
 
 function toUint8Array(payload) {
   if (payload instanceof ArrayBuffer) return new Uint8Array(payload);
@@ -63,9 +69,10 @@ const aliceSocket = io(apiUrl, { transports: ["websocket"] });
 const bobSocket = io(apiUrl, { transports: ["websocket"] });
 const aliceDoc = new Y.Doc();
 const bobDoc = new Y.Doc();
-const aliceText = aliceDoc.getText("content");
-const bobText = bobDoc.getText("content");
-let bobSawCursor = null;
+const aliceContent = aliceDoc.getXmlFragment(richContentField);
+const bobContent = bobDoc.getXmlFragment(richContentField);
+const aliceAwareness = new Awareness(aliceDoc);
+const bobAwareness = new Awareness(bobDoc);
 
 aliceSocket.on("y-update", (update) => {
   Y.applyUpdate(aliceDoc, toUint8Array(update), "remote");
@@ -73,8 +80,8 @@ aliceSocket.on("y-update", (update) => {
 bobSocket.on("y-update", (update) => {
   Y.applyUpdate(bobDoc, toUint8Array(update), "remote");
 });
-bobSocket.on("cursor-update", (cursor) => {
-  bobSawCursor = cursor;
+bobSocket.on("awareness-update", (update) => {
+  applyAwarenessUpdate(bobAwareness, toUint8Array(update), "remote");
 });
 
 const aliceJoin = await join(aliceSocket, created.code, "Alice", created.creatorToken);
@@ -86,25 +93,39 @@ assert.equal(bobJoin.role, "editor");
 Y.applyUpdate(aliceDoc, toUint8Array(aliceJoin.update), "remote");
 Y.applyUpdate(bobDoc, toUint8Array(bobJoin.update), "remote");
 
-aliceText.insert(0, "A sentence arriving live.");
+const paragraph = new Y.XmlElement("paragraph");
+const paragraphText = new Y.XmlText();
+paragraphText.insert(0, "A sentence arriving live.");
+paragraph.insert(0, [paragraphText]);
+aliceContent.insert(0, [paragraph]);
 aliceSocket.emit("y-update", Y.encodeStateAsUpdate(aliceDoc));
-await waitFor(() => bobText.toString() === "A sentence arriving live.");
-assert.equal(bobText.toString(), aliceText.toString());
+await waitFor(() => bobContent.toString().includes("A sentence arriving live."));
+assert.equal(bobContent.toString(), aliceContent.toString());
 
-aliceText.insert(0, "Alice added this. ");
-bobText.insert(bobText.length, " Bob added this.");
+const aliceParagraphText = aliceContent.get(0).get(0);
+const bobParagraphText = bobContent.get(0).get(0);
+aliceParagraphText.insert(0, "Alice added this. ");
+bobParagraphText.insert(bobParagraphText.length, " Bob added this.");
 aliceSocket.emit("y-update", Y.encodeStateAsUpdate(aliceDoc));
 bobSocket.emit("y-update", Y.encodeStateAsUpdate(bobDoc));
 await waitFor(
   () =>
-    aliceText.toString().includes("Alice added this.") &&
-    aliceText.toString().includes("Bob added this.") &&
-    bobText.toString() === aliceText.toString(),
+    aliceContent.toString().includes("Alice added this.") &&
+    aliceContent.toString().includes("Bob added this.") &&
+    bobContent.toString() === aliceContent.toString(),
 );
 
-aliceSocket.emit("cursor-update", { start: 12, end: 12 });
-await waitFor(() => bobSawCursor?.start === 12);
-assert.equal(bobSawCursor.name, "Alice");
+aliceAwareness.setLocalStateField("user", {
+  name: "Alice",
+  color: "#1a535c",
+});
+aliceSocket.emit("awareness-update", {
+  clientId: aliceDoc.clientID,
+  update: encodeAwarenessUpdate(aliceAwareness, [aliceDoc.clientID]),
+});
+await waitFor(
+  () => bobAwareness.states.get(aliceDoc.clientID)?.user?.name === "Alice",
+);
 
 const unauthorizedEnd = await fetch(`${apiUrl}/api/sessions/${created.code}/end`, {
   method: "POST",
@@ -132,6 +153,8 @@ assert.ok(metadata.endedAt);
 aliceSocket.disconnect();
 bobSocket.disconnect();
 charlieSocket.disconnect();
+aliceAwareness.destroy();
+bobAwareness.destroy();
 aliceDoc.destroy();
 bobDoc.destroy();
 
@@ -157,7 +180,12 @@ soloViewer.on("write-denied", () => {
   viewerWriteDenied = true;
 });
 const maliciousDoc = new Y.Doc();
-maliciousDoc.getText("content").insert(0, "Viewer must not write");
+const maliciousContent = maliciousDoc.getXmlFragment(richContentField);
+const maliciousParagraph = new Y.XmlElement("paragraph");
+const maliciousText = new Y.XmlText();
+maliciousText.insert(0, "Viewer must not write");
+maliciousParagraph.insert(0, [maliciousText]);
+maliciousContent.insert(0, [maliciousParagraph]);
 soloViewer.emit("y-update", Y.encodeStateAsUpdate(maliciousDoc));
 await waitFor(() => viewerWriteDenied);
 
@@ -165,7 +193,7 @@ const soloVerifier = io(apiUrl, { transports: ["websocket"] });
 const soloVerifierJoin = await join(soloVerifier, solo.code, "Verifier");
 const verifiedSoloDoc = new Y.Doc();
 Y.applyUpdate(verifiedSoloDoc, toUint8Array(soloVerifierJoin.update), "remote");
-assert.equal(verifiedSoloDoc.getText("content").toString(), "");
+assert.equal(verifiedSoloDoc.getXmlFragment(richContentField).length, 0);
 
 soloCreator.disconnect();
 soloViewer.disconnect();

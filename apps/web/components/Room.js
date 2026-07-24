@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { io } from "socket.io-client";
-import getCaretCoordinates from "textarea-caret";
 import * as Y from "yjs";
+import { SimpleEditor } from "./tiptap-templates/simple/simple-editor";
+import { createSocketAwarenessProvider } from "../lib/socket-awareness";
 import { Check, Copy, Exit, Menu, Users } from "./Icons";
 import Logo from "./Logo";
 import ProfileAvatar from "./ProfileAvatar";
@@ -28,31 +29,6 @@ function toUint8Array(payload) {
   return new Uint8Array(payload || []);
 }
 
-function applyTextChange(doc, text, nextValue) {
-  const current = text.toString();
-  if (current === nextValue) return;
-
-  let start = 0;
-  const shortest = Math.min(current.length, nextValue.length);
-  while (start < shortest && current[start] === nextValue[start]) start += 1;
-
-  let currentEnd = current.length;
-  let nextEnd = nextValue.length;
-  while (
-    currentEnd > start &&
-    nextEnd > start &&
-    current[currentEnd - 1] === nextValue[nextEnd - 1]
-  ) {
-    currentEnd -= 1;
-    nextEnd -= 1;
-  }
-
-  doc.transact(() => {
-    if (currentEnd > start) text.delete(start, currentEnd - start);
-    if (nextEnd > start) text.insert(start, nextValue.slice(start, nextEnd));
-  }, "local");
-}
-
 function countWords(value) {
   const trimmed = value.trim();
   return trimmed ? trimmed.split(/\s+/).length : 0;
@@ -64,6 +40,24 @@ function profileColorIndex(value = "") {
     hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
   }
   return hash % 6;
+}
+
+const collaboratorColors = [
+  "#1a535c",
+  "#4ecdc4",
+  "#ff6b6b",
+  "#ffe66d",
+  "#1a535c",
+  "#4ecdc4",
+];
+
+function collaboratorIdentity(name) {
+  const colorIndex = profileColorIndex(name);
+  return {
+    name,
+    color: collaboratorColors[colorIndex],
+    foreground: colorIndex === 0 || colorIndex === 4 ? "#f7fff7" : "#1a535c",
+  };
 }
 
 function modeLabel(mode) {
@@ -103,57 +97,17 @@ export default function Room({ code }) {
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showPeople, setShowPeople] = useState(false);
-  const [remoteCursors, setRemoteCursors] = useState({});
-  const [cursorPositions, setCursorPositions] = useState([]);
+  const [collaborationDocument, setCollaborationDocument] = useState(null);
+  const [collaborationProvider, setCollaborationProvider] = useState(null);
+  const [activeEditorNames, setActiveEditorNames] = useState(new Set());
   const socketRef = useRef(null);
   const docRef = useRef(null);
-  const textRef = useRef(null);
   const editorRef = useRef(null);
-  const cursorTimersRef = useRef({});
   const roleRef = useRef(null);
 
   const wordCount = useMemo(() => countWords(content), [content]);
   const canEdit = joined && role === "editor" && !endedAt;
-
-  const refreshCursorPositions = useCallback(() => {
-    const editor = editorRef.current;
-    if (!editor) return;
-    const positions = Object.values(remoteCursors).map((cursor) => {
-      const offset = Math.min(cursor.start, editor.value.length);
-      const coordinates = getCaretCoordinates(editor, offset);
-      return {
-        ...cursor,
-        left: coordinates.left - editor.scrollLeft,
-        top: coordinates.top - editor.scrollTop,
-        height: coordinates.height,
-        colorIndex: profileColorIndex(cursor.name),
-      };
-    });
-    setCursorPositions(
-      positions.filter(
-        (cursor) =>
-          cursor.top > -24 &&
-          cursor.top < editor.clientHeight &&
-          cursor.left > -12 &&
-          cursor.left < editor.clientWidth,
-      ),
-    );
-  }, [remoteCursors]);
-
-  const reportCursor = useCallback(() => {
-    const editor = editorRef.current;
-    const socket = socketRef.current;
-    if (!editor || !socket?.connected || roleRef.current !== "editor") return;
-    socket.emit("cursor-update", {
-      start: editor.selectionStart,
-      end: editor.selectionEnd,
-    });
-  }, []);
-
-  useEffect(() => {
-    const frame = window.requestAnimationFrame(refreshCursorPositions);
-    return () => window.cancelAnimationFrame(frame);
-  }, [content, refreshCursorPositions]);
+  const collaborationUser = useMemo(() => collaboratorIdentity(name), [name]);
 
   useEffect(() => {
     const savedToken =
@@ -187,22 +141,34 @@ export default function Room({ code }) {
     if (!name || endedAt) return undefined;
 
     const doc = new Y.Doc();
-    const text = doc.getText("content");
     const socket = io(getApiUrl(), { transports: ["websocket", "polling"] });
+    const provider = createSocketAwarenessProvider(doc, socket);
     docRef.current = doc;
-    textRef.current = text;
     socketRef.current = socket;
 
-    const observeText = () => setContent(text.toString());
     const sendUpdate = (update, origin) => {
-      if (origin === "local" && socket.connected && roleRef.current === "editor") {
+      if (
+        origin !== "remote" &&
+        socket.connected &&
+        roleRef.current === "editor"
+      ) {
         setStatus("Saving");
         socket.emit("y-update", update);
       }
     };
 
-    text.observe(observeText);
+    const updateActiveEditors = () => {
+      setActiveEditorNames(
+        new Set(
+          [...provider.awareness.states.values()]
+            .filter((state) => state?.cursor && state?.user?.name)
+            .map((state) => state.user.name),
+        ),
+      );
+    };
+
     doc.on("update", sendUpdate);
+    provider.awareness.on("change", updateActiveEditors);
 
     socket.on("connect", () => {
       setStatus("Connecting");
@@ -229,12 +195,17 @@ export default function Room({ code }) {
         setRole(result.role);
         setAccessReason(result.accessReason || "");
         setJoined(true);
+        setCollaborationDocument(doc);
+        setCollaborationProvider(provider);
+        provider.awareness.setLocalState(
+          provider.awareness.getLocalState() || {},
+        );
         setStatus("Live");
         if (result.accessReason === "editor_limit_reached") {
           setNotice("Editor seats are full. You joined with read-only access.");
         }
         if (result.role === "editor") {
-          window.setTimeout(() => editorRef.current?.focus(), 80);
+          window.setTimeout(() => editorRef.current?.commands.focus(), 80);
         }
       });
     });
@@ -245,23 +216,6 @@ export default function Room({ code }) {
     });
     socket.on("presence", (nextParticipants) => {
       setParticipants(nextParticipants);
-      const activeIds = new Set(nextParticipants.map((person) => person.id));
-      setRemoteCursors((current) =>
-        Object.fromEntries(
-          Object.entries(current).filter(([participantId]) => activeIds.has(participantId)),
-        ),
-      );
-    });
-    socket.on("cursor-update", (cursor) => {
-      setRemoteCursors((current) => ({ ...current, [cursor.id]: cursor }));
-      window.clearTimeout(cursorTimersRef.current[cursor.id]);
-      cursorTimersRef.current[cursor.id] = window.setTimeout(() => {
-        setRemoteCursors((current) => {
-          const next = { ...current };
-          delete next[cursor.id];
-          return next;
-        });
-      }, 3800);
     });
     socket.on("saved", () => setStatus("Live"));
     socket.on("write-denied", ({ error: message }) => {
@@ -277,17 +231,19 @@ export default function Room({ code }) {
     socket.on("connect_error", () => setStatus("Reconnecting"));
 
     return () => {
-      text.unobserve(observeText);
       doc.off("update", sendUpdate);
+      provider.awareness.off("change", updateActiveEditors);
+      provider.destroy();
       socket.disconnect();
       doc.destroy();
-      Object.values(cursorTimersRef.current).forEach(window.clearTimeout);
-      cursorTimersRef.current = {};
-      setRemoteCursors({});
+      setCollaborationDocument(null);
+      setCollaborationProvider(null);
+      setActiveEditorNames(new Set());
+      setContent("");
       roleRef.current = null;
       socketRef.current = null;
       docRef.current = null;
-      textRef.current = null;
+      editorRef.current = null;
     };
   }, [code, name, endedAt, creatorToken]);
 
@@ -298,14 +254,6 @@ export default function Room({ code }) {
     localStorage.setItem(`pagerelay:name:${code}`, cleanName);
     setJoinRejected("");
     setName(cleanName);
-  }
-
-  function editDocument(event) {
-    setContent(event.target.value);
-    if (docRef.current && textRef.current) {
-      applyTextChange(docRef.current, textRef.current, event.target.value);
-    }
-    window.requestAnimationFrame(reportCursor);
   }
 
   async function copyLink() {
@@ -508,13 +456,13 @@ export default function Room({ code }) {
                         <ProfileAvatar seed={person.name} size={28} decorative />
                       </span>
                       <span>{person.name}</span>
-                      <span className={remoteCursors[person.id] ? "person-state is-editing" : "person-state"}>
+                      <span className={activeEditorNames.has(person.name) ? "person-state is-editing" : "person-state"}>
                         <i />
                         {socketRef.current?.id === person.id
                           ? "You"
                           : person.role === "viewer"
                             ? "Viewing"
-                          : remoteCursors[person.id]
+                          : activeEditorNames.has(person.name)
                             ? "Editing"
                             : "Online"}
                       </span>
@@ -600,46 +548,34 @@ export default function Room({ code }) {
               </button>
             </div>
           </div>
-          <label className="sr-only" htmlFor="live-editor">Shared live document</label>
           <div className="editor-canvas">
-            <textarea
-              ref={editorRef}
-              id="live-editor"
-              className="live-editor"
-              value={content}
-              onChange={editDocument}
-              onSelect={reportCursor}
-              onScroll={refreshCursorPositions}
-              placeholder={
-                joined
-                  ? canEdit
+            {collaborationDocument && collaborationProvider ? (
+              <SimpleEditor
+                document={collaborationDocument}
+                provider={collaborationProvider}
+                user={collaborationUser}
+                editable={canEdit}
+                onContentChange={setContent}
+                onReady={(editor) => {
+                  editorRef.current = editor;
+                  if (canEdit) window.setTimeout(() => editor.commands.focus(), 80);
+                }}
+                placeholder={
+                  canEdit
                     ? "Start writing. Everyone here will see it live…"
                     : "The note is currently empty."
-                  : "Waiting to join…"
-              }
-              disabled={!joined}
-              readOnly={!canEdit}
-              spellCheck="true"
-              aria-describedby="editor-help"
-            />
-            <div className="remote-cursors-layer" aria-hidden="true">
-              {cursorPositions.map((cursor) => (
-                <span
-                  className={`remote-cursor profile-color-${cursor.colorIndex}`}
-                  key={cursor.id}
-                  style={{
-                    left: `${cursor.left}px`,
-                    top: `${cursor.top}px`,
-                    height: `${cursor.height}px`,
-                  }}
-                >
-                  <i />
-                  <strong>{cursor.name}</strong>
-                </span>
-              ))}
-            </div>
+                }
+              />
+            ) : (
+              <div className="editor-loading" role="status">
+                Preparing the live editor…
+              </div>
+            )}
           </div>
-          <div className="paper-footer" id="editor-help">
+          <div
+            className={`paper-footer ${canEdit ? "has-editor-toolbar" : ""}`}
+            id="editor-help"
+          >
             <span className="num">{wordCount} {wordCount === 1 ? "word" : "words"}</span>
             <span className="num">{content.length} characters</span>
             <span>

@@ -62,11 +62,6 @@ const joinSchema = z.object({
   name: z.string().trim().min(1).max(40),
   creatorToken: z.string().max(100).optional(),
 });
-const cursorSchema = z.object({
-  start: z.number().int().nonnegative().max(1_000_000),
-  end: z.number().int().nonnegative().max(1_000_000),
-});
-
 app.get("/health", (_request, response) => {
   response.json({ ok: true });
 });
@@ -157,6 +152,7 @@ app.use((error, _request, response, _next) => {
 const rooms = new Map();
 const roomLoads = new Map();
 const participants = new Map();
+const richContentField = "richContent";
 
 function roomKey(code) {
   return `session:${code}`;
@@ -183,6 +179,18 @@ async function loadRoom(code) {
     const doc = new Y.Doc();
     if (session.doc_state?.length) {
       Y.applyUpdate(doc, new Uint8Array(session.doc_state), "database");
+    }
+    const legacyText = doc.getText("content");
+    const richContent = doc.getXmlFragment(richContentField);
+    if (richContent.length === 0 && legacyText.length > 0) {
+      doc.transact(() => {
+        const paragraph = new Y.XmlElement("paragraph");
+        const text = new Y.XmlText();
+        text.insert(0, legacyText.toString());
+        paragraph.insert(0, [text]);
+        richContent.insert(0, [paragraph]);
+      }, "legacy-migration");
+      await saveDocument(code, Y.encodeStateAsUpdate(doc));
     }
     const room = { doc, dirtyTimer: null };
     rooms.set(code, room);
@@ -264,6 +272,7 @@ io.on("connection", (socket) => {
         participants: publicParticipants(code),
       });
       io.to(roomKey(code)).emit("presence", publicParticipants(code));
+      socket.to(roomKey(code)).emit("awareness-query");
     } catch (error) {
       acknowledge({ ok: false, error: "Unable to join this session" });
     }
@@ -290,23 +299,36 @@ io.on("connection", (socket) => {
     socket.emit("saved");
   });
 
-  socket.on("cursor-update", (payload) => {
+  socket.on("awareness-update", (payload) => {
     const code = socket.data.code;
-    const name = socket.data.name;
-    if (!code || !name || socket.data.role !== "editor") return;
-    const parsed = cursorSchema.safeParse(payload);
-    if (!parsed.success) return;
-    socket.to(roomKey(code)).emit("cursor-update", {
-      id: socket.id,
-      name,
-      start: parsed.data.start,
-      end: parsed.data.end,
-    });
+    const clientId = payload?.clientId;
+    const update = payload?.update;
+    if (!code || !Number.isSafeInteger(clientId) || !update) return;
+
+    const binary = Buffer.isBuffer(update)
+      ? update
+      : update instanceof ArrayBuffer
+        ? Buffer.from(update)
+        : ArrayBuffer.isView(update)
+          ? Buffer.from(update.buffer, update.byteOffset, update.byteLength)
+          : update?.data
+            ? Buffer.from(update.data)
+            : null;
+    if (!binary || binary.byteLength > 32_768) return;
+
+    socket.data.awarenessClientId = clientId;
+    socket.to(roomKey(code)).emit("awareness-update", binary);
   });
 
   socket.on("disconnect", async () => {
     const code = socket.data.code;
     if (!code) return;
+    if (Number.isSafeInteger(socket.data.awarenessClientId)) {
+      io.to(roomKey(code)).emit(
+        "awareness-remove",
+        socket.data.awarenessClientId,
+      );
+    }
     participants.get(code)?.delete(socket.id);
     if (participants.get(code)?.size === 0) participants.delete(code);
     io.to(roomKey(code)).emit("presence", publicParticipants(code));

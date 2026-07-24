@@ -6,7 +6,8 @@
     "dev": "concurrently -n api,web -c blue,green \"npm --prefix apps/api run dev\" \"npm --prefix apps/web run dev\"",
     "build": "npm --prefix apps/api run build && npm --prefix apps/web run build",
     "test": "npm --prefix apps/api test",
-    "check": "npm run test && npm run build"
+    "check": "npm run test && npm run build",
+    "smoke": "npm --prefix apps/web run smoke"
   },
   "devDependencies": {
     "concurrently": "^9.2.0"

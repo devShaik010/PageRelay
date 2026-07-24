@@ -42,3 +42,36 @@ jobs:
 
       - name: Test and build
         run: npm run check
+
+  live-stack:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install smoke-test dependencies
+        run: npm --prefix apps/web ci
+
+      - name: Start live stack
+        run: docker compose up -d --build --wait
+
+      - name: Verify collaboration modes
+        run: npm run smoke
+
+      - name: Show service logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Stop live stack
+        if: always()
+        run: docker compose down --volumes

@@ -66,6 +66,23 @@ function profileColorIndex(value = "") {
   return hash % 6;
 }
 
+function modeLabel(mode) {
+  if (!mode) return "Live";
+  return mode === "solo" ? "Solo" : mode === "duo" ? "Duo" : "Multi";
+}
+
+function accessSummary(metadata, role) {
+  if (!metadata) return "Opening access…";
+  if (role === "viewer") return "Read-only access";
+  if (metadata.mode === "solo") return "Creator editing";
+  if (metadata.mode === "duo") return "Two-person editing";
+  if (metadata.accessPolicy === "read_only") return "Creator editing";
+  if (metadata.accessPolicy === "limited") {
+    return `${metadata.editorLimit} collaborator seat${metadata.editorLimit === 1 ? "" : "s"}`;
+  }
+  return "Open collaboration";
+}
+
 export default function Room({ code }) {
   const [metadata, setMetadata] = useState(null);
   const [name, setName] = useState("");
@@ -75,9 +92,13 @@ export default function Room({ code }) {
   const [status, setStatus] = useState("Connecting");
   const [participants, setParticipants] = useState([]);
   const [creatorToken, setCreatorToken] = useState("");
+  const [role, setRole] = useState(null);
+  const [accessReason, setAccessReason] = useState("");
   const [endedAt, setEndedAt] = useState(null);
   const [notice, setNotice] = useState("");
   const [copyStatus, setCopyStatus] = useState("idle");
+  const [contentCopyStatus, setContentCopyStatus] = useState("idle");
+  const [joinRejected, setJoinRejected] = useState("");
   const [error, setError] = useState("");
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -89,8 +110,10 @@ export default function Room({ code }) {
   const textRef = useRef(null);
   const editorRef = useRef(null);
   const cursorTimersRef = useRef({});
+  const roleRef = useRef(null);
 
   const wordCount = useMemo(() => countWords(content), [content]);
+  const canEdit = joined && role === "editor" && !endedAt;
 
   const refreshCursorPositions = useCallback(() => {
     const editor = editorRef.current;
@@ -120,7 +143,7 @@ export default function Room({ code }) {
   const reportCursor = useCallback(() => {
     const editor = editorRef.current;
     const socket = socketRef.current;
-    if (!editor || !socket?.connected) return;
+    if (!editor || !socket?.connected || roleRef.current !== "editor") return;
     socket.emit("cursor-update", {
       start: editor.selectionStart,
       end: editor.selectionEnd,
@@ -151,6 +174,11 @@ export default function Room({ code }) {
         if (!response.ok) throw new Error(data.error || "This sheet could not be found");
         setMetadata(data);
         setEndedAt(data.endedAt);
+        const opensAsViewer =
+          !savedToken &&
+          (data.mode === "solo" ||
+            (data.mode === "multi" && data.accessPolicy === "read_only"));
+        if (opensAsViewer && !savedName) setName("Viewer");
       })
       .catch((requestError) => setError(requestError.message));
   }, [code]);
@@ -167,7 +195,7 @@ export default function Room({ code }) {
 
     const observeText = () => setContent(text.toString());
     const sendUpdate = (update, origin) => {
-      if (origin === "local" && socket.connected) {
+      if (origin === "local" && socket.connected && roleRef.current === "editor") {
         setStatus("Saving");
         socket.emit("y-update", update);
       }
@@ -178,22 +206,36 @@ export default function Room({ code }) {
 
     socket.on("connect", () => {
       setStatus("Connecting");
-      socket.emit("join-session", { code, name }, (result) => {
+      socket.emit("join-session", { code, name, creatorToken }, (result) => {
         if (!result?.ok) {
           if (result?.ended) {
             setMetadata((current) => current || { title: result.title });
             setEndedAt(result.endedAt);
           } else {
-            setError(result?.error || "Could not join the session");
+            setJoinRejected(result?.error || "Could not join the session");
           }
           return;
         }
         if (result.update) Y.applyUpdate(doc, toUint8Array(result.update), "remote");
-        setMetadata((current) => ({ ...current, title: result.title }));
+        setMetadata((current) => ({
+          ...current,
+          title: result.title,
+          mode: result.mode,
+          accessPolicy: result.accessPolicy,
+          editorLimit: result.editorLimit,
+        }));
         setParticipants(result.participants || []);
+        roleRef.current = result.role;
+        setRole(result.role);
+        setAccessReason(result.accessReason || "");
         setJoined(true);
         setStatus("Live");
-        window.setTimeout(() => editorRef.current?.focus(), 80);
+        if (result.accessReason === "editor_limit_reached") {
+          setNotice("Editor seats are full. You joined with read-only access.");
+        }
+        if (result.role === "editor") {
+          window.setTimeout(() => editorRef.current?.focus(), 80);
+        }
       });
     });
 
@@ -222,6 +264,11 @@ export default function Room({ code }) {
       }, 3800);
     });
     socket.on("saved", () => setStatus("Live"));
+    socket.on("write-denied", ({ error: message }) => {
+      roleRef.current = "viewer";
+      setRole("viewer");
+      setNotice(message || "This sheet is read-only for you.");
+    });
     socket.on("session-ended", ({ endedAt: timestamp }) => {
       setEndedAt(timestamp);
       setNotice("The creator ended this session.");
@@ -237,17 +284,19 @@ export default function Room({ code }) {
       Object.values(cursorTimersRef.current).forEach(window.clearTimeout);
       cursorTimersRef.current = {};
       setRemoteCursors({});
+      roleRef.current = null;
       socketRef.current = null;
       docRef.current = null;
       textRef.current = null;
     };
-  }, [code, name, endedAt]);
+  }, [code, name, endedAt, creatorToken]);
 
   function joinSession(event) {
     event.preventDefault();
     const cleanName = joinName.trim();
     if (!cleanName) return;
     localStorage.setItem(`pagerelay:name:${code}`, cleanName);
+    setJoinRejected("");
     setName(cleanName);
   }
 
@@ -300,6 +349,44 @@ export default function Room({ code }) {
     }
     window.setTimeout(() => {
       setCopyStatus("idle");
+      setNotice("");
+    }, 2400);
+  }
+
+  async function copyContent() {
+    let copied = false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(content);
+        copied = true;
+      }
+    } catch {
+      copied = false;
+    }
+
+    if (!copied) {
+      const temporaryInput = document.createElement("textarea");
+      const previouslyFocused = document.activeElement;
+      try {
+        temporaryInput.value = content;
+        temporaryInput.setAttribute("readonly", "");
+        temporaryInput.style.position = "fixed";
+        temporaryInput.style.opacity = "0";
+        document.body.appendChild(temporaryInput);
+        temporaryInput.select();
+        copied = document.execCommand("copy");
+      } catch {
+        copied = false;
+      } finally {
+        temporaryInput.remove();
+        previouslyFocused?.focus();
+      }
+    }
+
+    setContentCopyStatus(copied ? "copied" : "failed");
+    setNotice(copied ? "Full note copied." : "Could not copy the note.");
+    window.setTimeout(() => {
+      setContentCopyStatus("idle");
       setNotice("");
     }, 2400);
   }
@@ -365,7 +452,17 @@ export default function Room({ code }) {
               </div>
               <div className="session-detail">
                 <span>Your role</span>
-                <strong>{creatorToken ? "Creator" : "Collaborator"}</strong>
+                <strong>
+                  {creatorToken ? "Creator" : role === "viewer" ? "Viewer" : "Collaborator"}
+                </strong>
+              </div>
+              <div className="session-detail">
+                <span>Mode</span>
+                <strong>{modeLabel(metadata?.mode)} mode</strong>
+              </div>
+              <div className="session-detail">
+                <span>Access</span>
+                <strong>{accessSummary(metadata, role)}</strong>
               </div>
               <a className="popover-home-link" href="/">
                 <Logo compact />
@@ -415,6 +512,8 @@ export default function Room({ code }) {
                         <i />
                         {socketRef.current?.id === person.id
                           ? "You"
+                          : person.role === "viewer"
+                            ? "Viewing"
                           : remoteCursors[person.id]
                             ? "Editing"
                             : "Online"}
@@ -465,10 +564,41 @@ export default function Room({ code }) {
             <span>This sheet is preserved as read-only.</span>
           </div>
         )}
+        {!endedAt && joined && role === "viewer" && (
+          <div className="access-banner" role="status">
+            <strong>Viewing only</strong>
+            <span>
+              {accessReason === "editor_limit_reached"
+                ? "All editor seats are occupied. You can read and copy this note."
+                : "The creator has shared this note as read-only."}
+            </span>
+          </div>
+        )}
         <div className="paper">
           <div className="document-heading">
-            <p className="document-kicker">LIVE SHEET</p>
-            <h1>{metadata?.title || "Untitled sheet"}</h1>
+            <div className="document-heading-row">
+              <div>
+                <p className="document-kicker">
+                  {modeLabel(metadata?.mode).toUpperCase()} MODE · {accessSummary(metadata, role).toUpperCase()}
+                </p>
+                <h1>{metadata?.title || "Untitled sheet"}</h1>
+              </div>
+              <button
+                className={`copy-content-button ${contentCopyStatus === "copied" ? "is-copied" : ""}`}
+                onClick={copyContent}
+                disabled={!joined || !content}
+                type="button"
+              >
+                {contentCopyStatus === "copied" ? <Check /> : <Copy />}
+                <span>
+                  {contentCopyStatus === "copied"
+                    ? "Copied"
+                    : contentCopyStatus === "failed"
+                      ? "Copy failed"
+                      : "Copy all"}
+                </span>
+              </button>
+            </div>
           </div>
           <label className="sr-only" htmlFor="live-editor">Shared live document</label>
           <div className="editor-canvas">
@@ -480,8 +610,15 @@ export default function Room({ code }) {
               onChange={editDocument}
               onSelect={reportCursor}
               onScroll={refreshCursorPositions}
-              placeholder={joined ? "Start writing. Everyone here will see it live…" : "Waiting to join…"}
-              disabled={!joined || Boolean(endedAt)}
+              placeholder={
+                joined
+                  ? canEdit
+                    ? "Start writing. Everyone here will see it live…"
+                    : "The note is currently empty."
+                  : "Waiting to join…"
+              }
+              disabled={!joined}
+              readOnly={!canEdit}
               spellCheck="true"
               aria-describedby="editor-help"
             />
@@ -497,10 +634,7 @@ export default function Room({ code }) {
                   }}
                 >
                   <i />
-                  <strong>
-                    <ProfileAvatar seed={cursor.name} size={18} decorative />
-                    <span>{cursor.name}</span>
-                  </strong>
+                  <strong>{cursor.name}</strong>
                 </span>
               ))}
             </div>
@@ -508,7 +642,9 @@ export default function Room({ code }) {
           <div className="paper-footer" id="editor-help">
             <span className="num">{wordCount} {wordCount === 1 ? "word" : "words"}</span>
             <span className="num">{content.length} characters</span>
-            <span>{endedAt ? "Read only" : "Changes sync automatically"}</span>
+            <span>
+              {endedAt || role === "viewer" ? "Read only · copy enabled" : "Changes sync automatically"}
+            </span>
           </div>
         </div>
       </section>
@@ -518,7 +654,15 @@ export default function Room({ code }) {
           <section className="join-card" role="dialog" aria-modal="true" aria-labelledby="join-title">
             <p className="eyebrow">YOU&apos;VE BEEN INVITED</p>
             <h1 id="join-title">{metadata.title}</h1>
-            <p className="join-copy">Choose the name others will see while you write.</p>
+            <div className="join-mode-summary">
+              <strong>{modeLabel(metadata.mode)} mode</strong>
+              <span>{accessSummary(metadata, null)}</span>
+            </div>
+            <p className="join-copy">
+              {metadata.mode === "duo"
+                ? "This private sheet has one collaborator seat. Choose the name your partner will see."
+                : "Choose the name others will see while you write."}
+            </p>
             <form onSubmit={joinSession}>
               <div className="field">
                 <label htmlFor="join-name">Your name</label>
@@ -534,6 +678,17 @@ export default function Room({ code }) {
               </div>
               <button className="primary-button" type="submit">Enter live sheet</button>
             </form>
+          </section>
+        </div>
+      )}
+
+      {joinRejected && metadata && (
+        <div className="modal-backdrop">
+          <section className="join-card" role="alertdialog" aria-modal="true" aria-labelledby="full-title">
+            <p className="eyebrow">ROOM AT CAPACITY</p>
+            <h1 id="full-title">This Duo is already complete.</h1>
+            <p className="join-copy">{joinRejected}</p>
+            <a className="primary-button" href="/">Create your own sheet</a>
           </section>
         </div>
       )}

@@ -6,6 +6,12 @@ import { Server } from "socket.io";
 import * as Y from "yjs";
 import { z } from "zod";
 import {
+  MULTI_ACCESS_POLICIES,
+  resolveJoinAccess,
+  sessionConfiguration,
+  SESSION_MODES,
+} from "./access.js";
+import {
   closeStore,
   createSession,
   endSession,
@@ -47,10 +53,14 @@ const codeSchema = z.string().regex(/^[a-z0-9]{16}$/);
 const createSchema = z.object({
   title: z.string().trim().min(1).max(80),
   creatorName: z.string().trim().min(1).max(40),
+  mode: z.enum(SESSION_MODES),
+  accessPolicy: z.enum(MULTI_ACCESS_POLICIES).optional(),
+  editorLimit: z.number().int().min(1).max(20).nullable().optional(),
 });
 const joinSchema = z.object({
   code: codeSchema,
   name: z.string().trim().min(1).max(40),
+  creatorToken: z.string().max(100).optional(),
 });
 const cursorSchema = z.object({
   start: z.number().int().nonnegative().max(1_000_000),
@@ -64,12 +74,30 @@ app.get("/health", (_request, response) => {
 app.post("/api/sessions", async (request, response, next) => {
   try {
     const payload = createSchema.parse(request.body);
-    const session = await createSession(payload);
+    const requestedPolicy = payload.accessPolicy || "anyone";
+    if (
+      payload.mode === "multi" &&
+      requestedPolicy === "limited" &&
+      !payload.editorLimit
+    ) {
+      return response.status(400).json({
+        error: "Choose how many collaborators can edit this sheet",
+      });
+    }
+    const configuration = sessionConfiguration({
+      mode: payload.mode,
+      accessPolicy: requestedPolicy,
+      editorLimit: payload.editorLimit,
+    });
+    const session = await createSession({ ...payload, ...configuration });
     response.status(201).json({
       code: session.code,
       title: session.title,
       creatorName: session.creator_name,
       creatorToken: session.creatorToken,
+      mode: session.mode,
+      accessPolicy: session.access_policy,
+      editorLimit: session.editor_limit,
       createdAt: session.created_at,
     });
   } catch (error) {
@@ -86,6 +114,9 @@ app.get("/api/sessions/:code", async (request, response, next) => {
       code: session.code,
       title: session.title,
       creatorName: session.creator_name,
+      mode: session.mode,
+      accessPolicy: session.access_policy,
+      editorLimit: session.editor_limit,
       endedAt: session.ended_at,
       createdAt: session.created_at,
       updatedAt: session.updated_at,
@@ -132,10 +163,14 @@ function roomKey(code) {
 }
 
 function publicParticipants(code) {
-  return [...(participants.get(code)?.values() || [])].map(({ id, name }) => ({
-    id,
-    name,
-  }));
+  return [...(participants.get(code)?.values() || [])].map(
+    ({ id, name, role, isCreator }) => ({
+      id,
+      name,
+      role,
+      isCreator,
+    }),
+  );
 }
 
 async function loadRoom(code) {
@@ -172,8 +207,8 @@ function scheduleSave(code, room) {
 io.on("connection", (socket) => {
   socket.on("join-session", async (payload, acknowledge = () => {}) => {
     try {
-      const { code, name } = joinSchema.parse(payload);
-      const session = await findSession(code);
+      const { code, name, creatorToken } = joinSchema.parse(payload);
+      const session = await findSession(code, { includeSecret: true });
       if (!session) return acknowledge({ ok: false, error: "Session not found" });
       if (session.ended_at) {
         return acknowledge({
@@ -189,15 +224,42 @@ io.on("connection", (socket) => {
       clearTimeout(room.dirtyTimer);
       room.dirtyTimer = null;
 
+      if (!participants.has(code)) participants.set(code, new Map());
+      const isCreator = safeTokenMatch(creatorToken, session.creator_token_hash);
+      const access = resolveJoinAccess({
+        session,
+        isCreator,
+        participants: participants.get(code).values(),
+      });
+      if (!access.allowed) {
+        return acknowledge({
+          ok: false,
+          full: access.reason === "duo_full",
+          error: access.error,
+          mode: session.mode,
+        });
+      }
+
       socket.join(roomKey(code));
       socket.data.code = code;
       socket.data.name = name;
-      if (!participants.has(code)) participants.set(code, new Map());
-      participants.get(code).set(socket.id, { id: socket.id, name });
+      socket.data.role = access.role;
+      socket.data.isCreator = isCreator;
+      participants.get(code).set(socket.id, {
+        id: socket.id,
+        name,
+        role: access.role,
+        isCreator,
+      });
 
       acknowledge({
         ok: true,
         title: session.title,
+        mode: session.mode,
+        accessPolicy: session.access_policy,
+        editorLimit: session.editor_limit,
+        role: access.role,
+        accessReason: access.reason,
         update: Buffer.from(Y.encodeStateAsUpdate(room.doc)),
         participants: publicParticipants(code),
       });
@@ -210,6 +272,12 @@ io.on("connection", (socket) => {
   socket.on("y-update", async (payload) => {
     const code = socket.data.code;
     if (!code || !payload) return;
+    if (socket.data.role !== "editor") {
+      socket.emit("write-denied", {
+        error: "This sheet is read-only for you.",
+      });
+      return;
+    }
     const session = await findSession(code);
     if (!session || session.ended_at) return;
     const room = rooms.get(code);
@@ -225,7 +293,7 @@ io.on("connection", (socket) => {
   socket.on("cursor-update", (payload) => {
     const code = socket.data.code;
     const name = socket.data.name;
-    if (!code || !name) return;
+    if (!code || !name || socket.data.role !== "editor") return;
     const parsed = cursorSchema.safeParse(payload);
     if (!parsed.success) return;
     socket.to(roomKey(code)).emit("cursor-update", {

@@ -869,8 +869,8 @@ p {
 
 .create-modal-card {
   position: relative;
-  width: min(100%, 500px);
-  max-height: min(720px, calc(100vh - 40px));
+  width: min(100%, 680px);
+  max-height: min(820px, calc(100vh - 40px));
   overflow-y: auto;
   border: 1px solid var(--glass-border);
   border-radius: 18px;
@@ -882,6 +882,152 @@ p {
 .create-modal-card form {
   display: grid;
   gap: 21px;
+}
+
+.create-step-fields,
+.mode-step {
+  display: grid;
+  gap: 21px;
+}
+
+.creation-progress {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: -16px 0 24px 62px;
+}
+
+.creation-progress span {
+  height: 3px;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.creation-progress .is-complete {
+  background: var(--accent);
+}
+
+.mode-choices {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.mode-choice {
+  display: grid;
+  min-height: 82px;
+  grid-template-columns: 18px 34px 1fr;
+  align-items: start;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 17px;
+  cursor: pointer;
+  transition:
+    border-color 160ms var(--ease-standard),
+    background 160ms var(--ease-standard);
+}
+
+.mode-choice:hover {
+  border-color: var(--muted);
+}
+
+.mode-choice.is-selected {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent), var(--bg) 94%);
+}
+
+.mode-choice input {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+
+.mode-index {
+  padding-top: 2px;
+  color: var(--meta);
+  font-size: 9px;
+}
+
+.mode-choice > span:last-child,
+.access-choices label span {
+  display: grid;
+  gap: 4px;
+}
+
+.mode-choice strong,
+.access-choices strong {
+  color: var(--fg);
+  font-size: 14px;
+}
+
+.mode-choice small,
+.access-choices small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.access-choices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.access-choices legend {
+  grid-column: 1 / -1;
+  margin-bottom: 4px;
+  color: var(--fg-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.access-choices label {
+  display: grid;
+  min-height: 82px;
+  grid-template-columns: 17px 1fr;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.access-choices label:has(input:checked) {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent), var(--bg) 94%);
+}
+
+.access-choices input {
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+
+.editor-limit-field {
+  width: min(100%, 320px);
+}
+
+.create-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.create-form-actions .secondary-button {
+  min-width: 110px;
+}
+
+.create-form-actions .create-button {
+  width: auto;
+  min-width: 180px;
+  margin-top: 0;
 }
 
 .modal-close {
@@ -1372,6 +1518,13 @@ p {
     6px;
 }
 
+.document-heading-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+}
+
 .document-kicker {
   margin: 0 0 15px;
   color: var(--meta);
@@ -1388,6 +1541,32 @@ p {
   font-weight: 700;
   letter-spacing: -0.045em;
   line-height: 1;
+}
+
+.copy-content-button {
+  display: inline-flex;
+  min-height: 42px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 9px 13px;
+  color: var(--fg-2);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.copy-content-button:hover:not(:disabled),
+.copy-content-button.is-copied {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.copy-content-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .live-editor {
@@ -1451,31 +1630,17 @@ p {
   left: -3px;
   display: flex;
   align-items: center;
-  gap: 4px;
   max-width: 130px;
   overflow: hidden;
   border-radius: 4px 4px 4px 0;
   background: currentColor;
-  padding: 2px 6px 2px 2px;
+  padding: 3px 6px;
   color: var(--accent-on);
   font-size: 9px;
   font-weight: 600;
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.remote-cursor > strong .dicebear-avatar {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 auto;
-  border: 1px solid color-mix(in oklab, var(--accent-on), transparent 58%);
-  background: color-mix(in oklab, currentColor, var(--bg) 78%);
-}
-
-.remote-cursor > strong span {
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .live-editor:focus-visible {
@@ -1535,6 +1700,31 @@ p {
   -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 
+.access-banner {
+  position: fixed;
+  z-index: 16;
+  top: 102px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transform: translateX(-50%);
+  border: 1px solid var(--glass-border);
+  border-radius: 9999px;
+  background: var(--glass);
+  padding: 13px 18px;
+  box-shadow: var(--glass-shadow);
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+.access-banner strong {
+  color: var(--fg);
+}
+
 .ended-banner strong {
   color: var(--fg);
 }
@@ -1573,6 +1763,23 @@ p {
   margin-bottom: 28px;
   color: var(--muted);
   font-size: 14px;
+}
+
+.join-mode-summary {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 18px;
+  border-block: 1px solid var(--border-soft);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.join-mode-summary strong {
+  color: var(--accent);
+  text-transform: uppercase;
 }
 
 .join-card form {
@@ -1780,6 +1987,28 @@ p {
     padding-right: 34px;
   }
 
+  .creation-progress {
+    margin-left: 48px;
+  }
+
+  .access-choices {
+    grid-template-columns: 1fr;
+  }
+
+  .access-choices label {
+    min-height: 68px;
+  }
+
+  .create-form-actions {
+    display: grid;
+    grid-template-columns: auto 1fr;
+  }
+
+  .create-form-actions .create-button {
+    width: 100%;
+    min-width: 0;
+  }
+
   .hero-copy h1 {
     margin-bottom: 22px;
     font-size: clamp(48px, 15vw, 66px);
@@ -1843,6 +2072,21 @@ p {
     font-size: 40px;
   }
 
+  .document-heading-row {
+    align-items: flex-start;
+  }
+
+  .copy-content-button span {
+    display: none;
+  }
+
+  .copy-content-button {
+    width: 42px;
+    height: 42px;
+    justify-content: center;
+    padding: 0;
+  }
+
   .live-editor {
     min-height: calc(100vh - 220px);
     padding: 28px 22px 100px;
@@ -1865,6 +2109,16 @@ p {
     top: 86px;
     max-width: calc(100% - 24px);
     white-space: nowrap;
+  }
+
+  .access-banner {
+    top: 86px;
+    max-width: calc(100% - 24px);
+  }
+
+  .access-banner span {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .confirm-actions {

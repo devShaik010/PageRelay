@@ -66,7 +66,9 @@
   min-height: calc(100vh - 296px);
   flex: 1;
   margin: 0 auto;
+  border: 0;
   outline: 0;
+  box-shadow: none;
   padding: 38px 32px 120px;
   caret-color: #1a535c;
   color: var(--fg);
@@ -141,4 +143,12 @@
     padding: 28px 20px 126px;
     font-size: 17px;
   }
+}
+
+.simple-editor-content .tiptap.ProseMirror.simple-editor:focus,
+.simple-editor-content .tiptap.ProseMirror.simple-editor:focus-visible,
+.simple-editor-content .tiptap.ProseMirror.simple-editor.ProseMirror-focused {
+  border: 0;
+  outline: none;
+  box-shadow: none;
 }

@@ -2,9 +2,21 @@
 
 [![CI](https://github.com/devShaik010/PageRelay/actions/workflows/ci.yml/badge.svg)](https://github.com/devShaik010/PageRelay/actions/workflows/ci.yml)
 
-A small, link-based live notepad. Create a session, share its unique URL, edit
-together in real time, and let the session creator close the room when the work
-is done.
+A link-based collaborative document editor powered by Tiptap and Yjs. Create a
+session, share its unique URL, format and edit together in real time, and let
+the session creator close the room when the work is done.
+
+## Collaboration modes
+
+- **Solo:** only the creator edits; link visitors read and copy the full note.
+- **Duo:** the creator and one collaborator edit in a private two-person room.
+- **Multi:** the creator can make the room read-only, open editing to everyone,
+  or reserve a limited number of collaborator seats.
+
+The editor supports headings, lists, tasks, blockquotes, code blocks, inline
+formatting, links, highlighting, text alignment, and collaborative undo/redo.
+Concurrent rich-text edits are merged with Yjs. Editor permissions and room
+capacity are enforced by the API, not only by disabled controls in the browser.
 
 ## Run the complete stack
 

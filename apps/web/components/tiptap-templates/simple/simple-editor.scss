@@ -1,0 +1,154 @@
+.pagerelay-simple-editor {
+  --tt-toolbar-height: 46px;
+  --tt-theme-text: var(--fg);
+  --tt-bg-color: var(--bg);
+  --tt-toolbar-bg-color: var(--glass);
+  --tt-toolbar-border-color: var(--border);
+  --tt-border-color: var(--border);
+  --tt-card-bg-color: var(--bg);
+  --tt-card-border-color: var(--border);
+  --tt-cursor-color: #1a535c;
+  --tt-selection-color: #4ecdc4;
+  --tt-brand-color-50: #f7fff7;
+  --tt-brand-color-100: #f7fff7;
+  --tt-brand-color-200: #4ecdc4;
+  --tt-brand-color-300: #4ecdc4;
+  --tt-brand-color-400: #1a535c;
+  --tt-brand-color-500: #1a535c;
+  --tt-brand-color-600: #1a535c;
+  --tt-brand-color-700: #1a535c;
+  --tt-brand-color-800: #1a535c;
+  --tt-brand-color-900: #1a535c;
+  --tt-brand-color-950: #1a535c;
+  width: 100%;
+  min-height: calc(100vh - 250px);
+  color: var(--fg);
+  font-family: var(--font-body);
+}
+
+.pagerelay-simple-editor .tiptap-toolbar[data-variant="fixed"] {
+  top: 72px;
+  z-index: 18;
+  max-width: 1120px;
+  margin: 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--glass);
+  box-shadow: var(--elev-raised);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+.pagerelay-simple-editor .tiptap-button[data-active-item="true"] {
+  background: #4ecdc4;
+  color: #1a535c;
+}
+
+.pagerelay-simple-editor .tiptap-button:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.simple-editor-wrapper {
+  width: 100%;
+  min-height: calc(100vh - 250px);
+}
+
+.simple-editor-content {
+  display: flex;
+  width: 100%;
+  min-height: calc(100vh - 296px);
+  flex: 1;
+  flex-direction: column;
+}
+
+.simple-editor-content .tiptap.ProseMirror.simple-editor {
+  width: min(100%, 1120px);
+  min-height: calc(100vh - 296px);
+  flex: 1;
+  margin: 0 auto;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+  padding: 38px 32px 120px;
+  caret-color: #1a535c;
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.006em;
+  line-height: 1.7;
+}
+
+.simple-editor-content .tiptap.ProseMirror.simple-editor > :first-child {
+  margin-top: 0;
+}
+
+.simple-editor-content .tiptap.ProseMirror.simple-editor p.is-editor-empty:first-child::before {
+  height: 0;
+  float: left;
+  color: var(--meta);
+  content: attr(data-placeholder);
+  pointer-events: none;
+}
+
+.pagerelay-simple-editor[data-read-only="true"] .simple-editor {
+  color: var(--fg-2);
+  cursor: default;
+}
+
+.pagerelay-simple-editor .collaboration-carets__caret {
+  position: relative;
+  margin-right: -1px;
+  margin-left: -1px;
+  border-right: 1px solid;
+  border-left: 1px solid;
+  pointer-events: none;
+  word-break: normal;
+}
+
+.pagerelay-simple-editor .collaboration-carets__label {
+  position: absolute;
+  top: -1.65em;
+  left: -1px;
+  max-width: 140px;
+  overflow: hidden;
+  border-radius: 4px 4px 4px 0;
+  padding: 3px 6px;
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: none;
+}
+
+@media screen and (max-width: 720px) {
+  .pagerelay-simple-editor .tiptap-toolbar[data-variant="fixed"] {
+    position: fixed;
+    top: auto;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 12px;
+    width: auto;
+    height: var(--tt-toolbar-height);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding-bottom: 0;
+  }
+
+  .simple-editor-content .tiptap.ProseMirror.simple-editor {
+    min-height: calc(100vh - 250px);
+    padding: 28px 20px 126px;
+    font-size: 17px;
+  }
+}
+
+.simple-editor-content .tiptap.ProseMirror.simple-editor:focus,
+.simple-editor-content .tiptap.ProseMirror.simple-editor:focus-visible,
+.simple-editor-content .tiptap.ProseMirror.simple-editor.ProseMirror-focused {
+  border: 0;
+  outline: none;
+  box-shadow: none;
+}

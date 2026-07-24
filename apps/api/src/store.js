@@ -18,11 +18,18 @@ export async function ensureSchema() {
       title VARCHAR(80) NOT NULL,
       creator_name VARCHAR(40) NOT NULL,
       creator_token_hash CHAR(64) NOT NULL,
+      mode VARCHAR(10) NOT NULL DEFAULT 'multi',
+      access_policy VARCHAR(20) NOT NULL DEFAULT 'anyone',
+      editor_limit SMALLINT,
       doc_state BYTEA,
       ended_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    ALTER TABLE sessions ADD COLUMN IF NOT EXISTS mode VARCHAR(10) NOT NULL DEFAULT 'multi';
+    ALTER TABLE sessions ADD COLUMN IF NOT EXISTS access_policy VARCHAR(20) NOT NULL DEFAULT 'anyone';
+    ALTER TABLE sessions ADD COLUMN IF NOT EXISTS editor_limit SMALLINT;
 
     CREATE INDEX IF NOT EXISTS sessions_code_idx ON sessions (code);
   `);
@@ -52,16 +59,38 @@ export function createToken() {
   return crypto.randomBytes(32).toString("base64url");
 }
 
-export async function createSession({ title, creatorName }) {
+export async function createSession({
+  title,
+  creatorName,
+  mode,
+  accessPolicy,
+  editorLimit,
+}) {
   for (let attempt = 0; attempt < 4; attempt += 1) {
     const code = createCode();
     const creatorToken = createToken();
     try {
       const result = await pool.query(
-        `INSERT INTO sessions (code, title, creator_name, creator_token_hash)
-         VALUES ($1, $2, $3, $4)
-         RETURNING code, title, creator_name, created_at`,
-        [code, title, creatorName, hashToken(creatorToken)],
+        `INSERT INTO sessions (
+           code,
+           title,
+           creator_name,
+           creator_token_hash,
+           mode,
+           access_policy,
+           editor_limit
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING code, title, creator_name, mode, access_policy, editor_limit, created_at`,
+        [
+          code,
+          title,
+          creatorName,
+          hashToken(creatorToken),
+          mode,
+          accessPolicy,
+          editorLimit,
+        ],
       );
       return { ...result.rows[0], creatorToken };
     } catch (error) {
@@ -73,8 +102,8 @@ export async function createSession({ title, creatorName }) {
 
 export async function findSession(code, { includeSecret = false } = {}) {
   const columns = includeSecret
-    ? "code, title, creator_name, creator_token_hash, doc_state, ended_at, created_at, updated_at"
-    : "code, title, creator_name, ended_at, created_at, updated_at";
+    ? "code, title, creator_name, creator_token_hash, mode, access_policy, editor_limit, doc_state, ended_at, created_at, updated_at"
+    : "code, title, creator_name, mode, access_policy, editor_limit, ended_at, created_at, updated_at";
   const result = await pool.query(
     `SELECT ${columns} FROM sessions WHERE code = $1 LIMIT 1`,
     [code],

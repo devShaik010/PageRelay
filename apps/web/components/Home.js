@@ -6,6 +6,7 @@ import confetti from "canvas-confetti";
 import { Arrow } from "./Icons";
 import Logo from "./Logo";
 import ProfileAvatar from "./ProfileAvatar";
+import WelcomeModal from "./WelcomeModal";
 
 const CONFIGURED_API_URL = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
 const DEMO_SENTENCE = "Let’s ship the new onboarding flow on Friday.";
@@ -26,6 +27,10 @@ export default function Home() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createStep, setCreateStep] = useState(1);
+  const [mode, setMode] = useState("");
+  const [multiAccess, setMultiAccess] = useState("anyone");
+  const [editorLimit, setEditorLimit] = useState(2);
   const [demoText, setDemoText] = useState("");
   const [demoStage, setDemoStage] = useState("sharing");
   const [celebrating, setCelebrating] = useState(false);
@@ -92,18 +97,41 @@ export default function Home() {
 
   function openCreateModal() {
     setError("");
+    setCreateStep(1);
+    setMode("");
+    setMultiAccess("anyone");
+    setEditorLimit(2);
     setShowCreateModal(true);
+  }
+
+  function continueToMode(event) {
+    event.preventDefault();
+    setError("");
+    setCreateStep(2);
   }
 
   async function createSession(event) {
     event.preventDefault();
+    if (!mode) {
+      setError("Choose how this sheet should work.");
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
       const response = await fetch(`${getApiUrl()}/api/sessions`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ title, creatorName }),
+        body: JSON.stringify({
+          title,
+          creatorName,
+          mode,
+          accessPolicy: mode === "multi" ? multiAccess : undefined,
+          editorLimit:
+            mode === "multi" && multiAccess === "limited"
+              ? Number(editorLimit)
+              : undefined,
+        }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not create the session");
@@ -135,6 +163,7 @@ export default function Home() {
 
   return (
     <main className="home-shell" id="main-content">
+      <WelcomeModal />
       <a className="skip-link" href="#live-demo">Skip to live preview</a>
       <header className="home-nav" data-od-id="topnav">
         <Logo />
@@ -268,50 +297,227 @@ export default function Home() {
               <span aria-hidden="true">×</span>
             </button>
             <div className="panel-heading">
-              <span className="step-number num">01</span>
+              <span className="step-number num">0{createStep}</span>
               <div>
-                <h2 id="create-modal-title">Start a live sheet</h2>
-                <p>You&apos;ll get a unique link to share.</p>
+                <h2 id="create-modal-title">
+                  {createStep === 1 ? "Name your live sheet" : "Choose how people join"}
+                </h2>
+                <p>
+                  {createStep === 1
+                    ? "Add the details people will recognize."
+                    : "You can share the same link in every mode."}
+                </p>
               </div>
             </div>
-            <form id="create-session" onSubmit={createSession}>
-              <div className="field">
-                <label htmlFor="sheet-title">Sheet name</label>
-                <input
-                  id="sheet-title"
-                  name="title"
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  maxLength={80}
-                  placeholder="Thursday planning notes"
-                  autoComplete="off"
-                  autoFocus
-                  required
-                />
-                <span className="field-hint">Make it easy for guests to recognize.</span>
-              </div>
-              <div className="field">
-                <label htmlFor="creator-name">Your name</label>
-                <input
-                  id="creator-name"
-                  name="creatorName"
-                  value={creatorName}
-                  onChange={(event) => setCreatorName(event.target.value)}
-                  maxLength={40}
-                  placeholder="Avery"
-                  autoComplete="name"
-                  required
-                />
-                <span className="field-hint">Shown to people who join the sheet.</span>
-              </div>
+            <div className="creation-progress" aria-label={`Step ${createStep} of 2`}>
+              <span className="is-complete" />
+              <span className={createStep === 2 ? "is-complete" : ""} />
+            </div>
+            <form
+              id="create-session"
+              onSubmit={createStep === 1 ? continueToMode : createSession}
+            >
+              {createStep === 1 ? (
+                <div className="create-step-fields">
+                  <div className="field">
+                    <label htmlFor="sheet-title">Sheet title</label>
+                    <input
+                      id="sheet-title"
+                      name="title"
+                      value={title}
+                      onChange={(event) => setTitle(event.target.value)}
+                      maxLength={80}
+                      placeholder="Thursday planning notes"
+                      autoComplete="off"
+                      autoFocus
+                      required
+                    />
+                    <span className="field-hint">Make it easy for guests to recognize.</span>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="creator-name">Your name</label>
+                    <input
+                      id="creator-name"
+                      name="creatorName"
+                      value={creatorName}
+                      onChange={(event) => setCreatorName(event.target.value)}
+                      maxLength={40}
+                      placeholder="Avery"
+                      autoComplete="name"
+                      required
+                    />
+                    <span className="field-hint">Shown to people who join the sheet.</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="mode-step">
+                  <fieldset className="mode-choices">
+                    <legend className="sr-only">Collaboration mode</legend>
+                    <label className={`mode-choice ${mode === "solo" ? "is-selected" : ""}`}>
+                      <input
+                        type="radio"
+                        name="mode"
+                        value="solo"
+                        checked={mode === "solo"}
+                        onChange={(event) => setMode(event.target.value)}
+                        required
+                      />
+                      <span className="mode-index num">01</span>
+                      <span className="mode-visual mode-visual-solo" aria-hidden="true">
+                        <span className="mode-avatar profile-color-0">
+                          <ProfileAvatar seed="Solo writer" size={42} decorative />
+                        </span>
+                      </span>
+                      <span className="mode-copy">
+                        <span className="mode-title-row">
+                          <strong>Solo mode</strong>
+                          <span className="mode-capacity">1 writer</span>
+                        </span>
+                        <small>You write. Everyone with the link reads and copies.</small>
+                      </span>
+                    </label>
+                    <label className={`mode-choice ${mode === "duo" ? "is-selected" : ""}`}>
+                      <input
+                        type="radio"
+                        name="mode"
+                        value="duo"
+                        checked={mode === "duo"}
+                        onChange={(event) => setMode(event.target.value)}
+                      />
+                      <span className="mode-index num">02</span>
+                      <span className="mode-visual mode-visual-duo" aria-hidden="true">
+                        <span className="mode-avatar profile-color-0">
+                          <ProfileAvatar seed="Duo creator" size={38} decorative />
+                        </span>
+                        <span className="mode-avatar profile-color-1">
+                          <ProfileAvatar seed="Duo collaborator" size={38} decorative />
+                        </span>
+                      </span>
+                      <span className="mode-copy">
+                        <span className="mode-title-row">
+                          <strong>Duo mode</strong>
+                          <span className="mode-capacity">2 editors · private</span>
+                        </span>
+                        <small>A private writing room for you and one collaborator.</small>
+                      </span>
+                    </label>
+                    <label className={`mode-choice ${mode === "multi" ? "is-selected" : ""}`}>
+                      <input
+                        type="radio"
+                        name="mode"
+                        value="multi"
+                        checked={mode === "multi"}
+                        onChange={(event) => setMode(event.target.value)}
+                      />
+                      <span className="mode-index num">03</span>
+                      <span className="mode-visual mode-visual-multi" aria-hidden="true">
+                        <span className="mode-avatar profile-color-0">
+                          <ProfileAvatar seed="Multi creator" size={34} decorative />
+                        </span>
+                        <span className="mode-avatar profile-color-1">
+                          <ProfileAvatar seed="Multi teammate one" size={34} decorative />
+                        </span>
+                        <span className="mode-avatar profile-color-2">
+                          <ProfileAvatar seed="Multi teammate two" size={34} decorative />
+                        </span>
+                        <span className="mode-more num">+</span>
+                      </span>
+                      <span className="mode-copy">
+                        <span className="mode-title-row">
+                          <strong>Multi mode</strong>
+                          <span className="mode-capacity">Group room</span>
+                        </span>
+                        <small>Bring a group together with flexible editing access.</small>
+                      </span>
+                    </label>
+                  </fieldset>
+
+                  {mode === "multi" && (
+                    <fieldset className="access-choices">
+                      <legend>Who can edit?</legend>
+                      <label>
+                        <input
+                          type="radio"
+                          name="multi-access"
+                          value="read_only"
+                          checked={multiAccess === "read_only"}
+                          onChange={(event) => setMultiAccess(event.target.value)}
+                        />
+                        <span><strong>Read only</strong><small>Only you can write</small></span>
+                      </label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="multi-access"
+                          value="anyone"
+                          checked={multiAccess === "anyone"}
+                          onChange={(event) => setMultiAccess(event.target.value)}
+                        />
+                        <span><strong>Anyone</strong><small>Every visitor can write</small></span>
+                      </label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="multi-access"
+                          value="limited"
+                          checked={multiAccess === "limited"}
+                          onChange={(event) => setMultiAccess(event.target.value)}
+                        />
+                        <span><strong>Limited</strong><small>Set collaborator seats</small></span>
+                      </label>
+                    </fieldset>
+                  )}
+
+                  {mode === "multi" && multiAccess === "limited" && (
+                    <div className="field editor-limit-field">
+                      <label htmlFor="editor-limit">Collaborator seats</label>
+                      <input
+                        id="editor-limit"
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={editorLimit}
+                        onChange={(event) => setEditorLimit(event.target.value)}
+                        required
+                      />
+                      <span className="field-hint">
+                        Visitors beyond this limit can still read and copy.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
               {error && <p className="form-error" role="alert">{error}</p>}
-              <button className="primary-button create-button" disabled={submitting} type="submit">
-                <span>{submitting ? "Creating…" : "Create live sheet"}</span>
-                {!submitting && <Arrow />}
-              </button>
+              <div className="create-form-actions">
+                {createStep === 2 && (
+                  <button
+                    className="secondary-button"
+                    onClick={() => {
+                      setError("");
+                      setCreateStep(1);
+                    }}
+                    disabled={submitting}
+                    type="button"
+                  >
+                    Back
+                  </button>
+                )}
+                <button className="primary-button create-button" disabled={submitting} type="submit">
+                  <span>
+                    {createStep === 1
+                      ? "Next"
+                      : submitting
+                        ? "Creating…"
+                        : "Create live sheet"}
+                  </span>
+                  {!submitting && <Arrow />}
+                </button>
+              </div>
             </form>
             <p className="privacy-note">
-              Anyone with the link can join. You remain the only person who can end it.
+              {createStep === 1
+                ? "Your name stays tied to this browser for the live session."
+                : "Permissions are enforced by the live service, not only the page controls."}
             </p>
           </section>
         </div>

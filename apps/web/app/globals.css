@@ -917,9 +917,9 @@ p {
 
 .mode-choice {
   display: grid;
-  min-height: 82px;
-  grid-template-columns: 18px 34px 1fr;
-  align-items: start;
+  min-height: 94px;
+  grid-template-columns: 18px 78px minmax(0, 1fr);
+  align-items: center;
   gap: 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -933,11 +933,13 @@ p {
 
 .mode-choice:hover {
   border-color: var(--muted);
+  background: color-mix(in oklab, var(--surface), var(--fg) 2%);
 }
 
 .mode-choice.is-selected {
   border-color: var(--accent);
   background: color-mix(in oklab, var(--accent), var(--bg) 94%);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .mode-choice input {
@@ -948,15 +950,90 @@ p {
 }
 
 .mode-index {
-  padding-top: 2px;
   color: var(--meta);
   font-size: 9px;
 }
 
-.mode-choice > span:last-child,
+.mode-visual {
+  display: flex;
+  min-width: 72px;
+  align-items: center;
+}
+
+.mode-avatar {
+  display: grid;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.mode-avatar .dicebear-avatar {
+  display: block;
+}
+
+.mode-visual-solo {
+  justify-content: center;
+}
+
+.mode-visual-duo,
+.mode-visual-multi {
+  justify-content: flex-start;
+  padding-left: 4px;
+}
+
+.mode-visual-duo .mode-avatar + .mode-avatar {
+  margin-left: -11px;
+}
+
+.mode-visual-multi .mode-avatar + .mode-avatar {
+  margin-left: -13px;
+}
+
+.mode-more {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  margin-left: -10px;
+  place-items: center;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.mode-copy,
 .access-choices label span {
   display: grid;
   gap: 4px;
+}
+
+.mode-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.mode-capacity {
+  border-radius: 999px;
+  background: var(--surface);
+  padding: 3px 7px;
+  color: var(--fg-2);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.mode-choice.is-selected .mode-capacity {
+  background: color-mix(in oklab, var(--accent), var(--bg) 86%);
+  color: var(--accent);
 }
 
 .mode-choice strong,
@@ -1989,6 +2066,19 @@ p {
 
   .creation-progress {
     margin-left: 48px;
+  }
+
+  .mode-choice {
+    min-height: 86px;
+    grid-template-columns: 16px 68px minmax(0, 1fr);
+    gap: 9px;
+    padding: 13px;
+  }
+
+  .mode-visual {
+    min-width: 62px;
+    transform: scale(0.9);
+    transform-origin: left center;
   }
 
   .access-choices {

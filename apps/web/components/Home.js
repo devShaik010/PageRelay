@@ -361,8 +361,16 @@ export default function Home() {
                         required
                       />
                       <span className="mode-index num">01</span>
-                      <span>
-                        <strong>Solo mode</strong>
+                      <span className="mode-visual mode-visual-solo" aria-hidden="true">
+                        <span className="mode-avatar profile-color-0">
+                          <ProfileAvatar seed="Solo writer" size={42} decorative />
+                        </span>
+                      </span>
+                      <span className="mode-copy">
+                        <span className="mode-title-row">
+                          <strong>Solo mode</strong>
+                          <span className="mode-capacity">1 writer</span>
+                        </span>
                         <small>You write. Everyone with the link reads and copies.</small>
                       </span>
                     </label>
@@ -375,8 +383,19 @@ export default function Home() {
                         onChange={(event) => setMode(event.target.value)}
                       />
                       <span className="mode-index num">02</span>
-                      <span>
-                        <strong>Duo mode</strong>
+                      <span className="mode-visual mode-visual-duo" aria-hidden="true">
+                        <span className="mode-avatar profile-color-0">
+                          <ProfileAvatar seed="Duo creator" size={38} decorative />
+                        </span>
+                        <span className="mode-avatar profile-color-1">
+                          <ProfileAvatar seed="Duo collaborator" size={38} decorative />
+                        </span>
+                      </span>
+                      <span className="mode-copy">
+                        <span className="mode-title-row">
+                          <strong>Duo mode</strong>
+                          <span className="mode-capacity">2 editors · private</span>
+                        </span>
                         <small>A private writing room for you and one collaborator.</small>
                       </span>
                     </label>
@@ -389,8 +408,23 @@ export default function Home() {
                         onChange={(event) => setMode(event.target.value)}
                       />
                       <span className="mode-index num">03</span>
-                      <span>
-                        <strong>Multi mode</strong>
+                      <span className="mode-visual mode-visual-multi" aria-hidden="true">
+                        <span className="mode-avatar profile-color-0">
+                          <ProfileAvatar seed="Multi creator" size={34} decorative />
+                        </span>
+                        <span className="mode-avatar profile-color-1">
+                          <ProfileAvatar seed="Multi teammate one" size={34} decorative />
+                        </span>
+                        <span className="mode-avatar profile-color-2">
+                          <ProfileAvatar seed="Multi teammate two" size={34} decorative />
+                        </span>
+                        <span className="mode-more num">+</span>
+                      </span>
+                      <span className="mode-copy">
+                        <span className="mode-title-row">
+                          <strong>Multi mode</strong>
+                          <span className="mode-capacity">Group room</span>
+                        </span>
                         <small>Bring a group together with flexible editing access.</small>
                       </span>
                     </label>

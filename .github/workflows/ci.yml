@@ -35,10 +35,7 @@ jobs:
             apps/web/package-lock.json
 
       - name: Install dependencies
-        run: |
-          npm ci
-          npm --prefix apps/api ci
-          npm --prefix apps/web ci
+        run: npm ci
 
       - name: Test and build
         run: npm run check

@@ -6,6 +6,7 @@ import confetti from "canvas-confetti";
 import { Arrow } from "./Icons";
 import Logo from "./Logo";
 import ProfileAvatar from "./ProfileAvatar";
+import WelcomeModal from "./WelcomeModal";
 
 const CONFIGURED_API_URL = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
 const DEMO_SENTENCE = "Let’s ship the new onboarding flow on Friday.";
@@ -162,6 +163,7 @@ export default function Home() {
 
   return (
     <main className="home-shell" id="main-content">
+      <WelcomeModal />
       <a className="skip-link" href="#live-demo">Skip to live preview</a>
       <header className="home-nav" data-od-id="topnav">
         <Logo />

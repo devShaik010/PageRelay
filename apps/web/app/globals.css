@@ -309,6 +309,165 @@ p {
   background: var(--bg);
 }
 
+.welcome-backdrop {
+  position: fixed;
+  z-index: 90;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklab, var(--fg), transparent 56%);
+  padding: 24px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: welcome-fade-in 220ms var(--ease-standard) both;
+}
+
+.welcome-card {
+  position: relative;
+  display: grid;
+  width: min(100%, 760px);
+  min-height: 450px;
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+  grid-template-columns: minmax(280px, 0.92fr) minmax(360px, 1.08fr);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  background: var(--bg);
+  box-shadow: var(--glass-shadow);
+  animation: welcome-card-in 300ms var(--ease-standard) both;
+}
+
+.welcome-portrait {
+  position: relative;
+  min-height: 450px;
+  overflow: hidden;
+  background: var(--warn);
+}
+
+.welcome-portrait::after {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, transparent 55%, color-mix(in oklab, var(--accent), transparent 12%)),
+    linear-gradient(90deg, color-mix(in oklab, var(--warn), transparent 76%), transparent 42%);
+  content: "";
+  pointer-events: none;
+}
+
+.welcome-portrait img {
+  object-fit: cover;
+  object-position: 52% 40%;
+}
+
+.welcome-portrait-label {
+  position: absolute;
+  z-index: 1;
+  right: 24px;
+  bottom: 22px;
+  left: 24px;
+  color: var(--accent-on);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.welcome-content {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  padding: 52px 48px 44px;
+}
+
+.welcome-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+  transition:
+    background var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+
+.welcome-close:hover {
+  background: var(--warn);
+  color: var(--accent);
+}
+
+.welcome-kicker {
+  margin-bottom: 13px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.welcome-content h2 {
+  margin-bottom: 20px;
+  color: var(--fg);
+  font-size: clamp(46px, 6vw, 66px);
+  font-weight: 750;
+  letter-spacing: -0.055em;
+  line-height: 0.94;
+}
+
+.welcome-message {
+  margin-bottom: 26px;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.welcome-signoff {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 27px;
+  padding-left: 13px;
+  border-left: 3px solid var(--danger);
+}
+
+.welcome-signoff span {
+  color: var(--fg);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+}
+
+.welcome-signoff small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.welcome-action {
+  align-self: flex-start;
+  min-width: 170px;
+  justify-content: space-between;
+  border-radius: 8px;
+}
+
+@keyframes welcome-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes welcome-card-in {
+  from {
+    transform: translateY(12px) scale(0.985);
+    opacity: 0;
+  }
+}
+
 .home-nav,
 .home-footer {
   display: flex;
@@ -1904,6 +2063,55 @@ p {
 }
 
 @media (max-width: 620px) {
+  .welcome-backdrop {
+    align-items: center;
+    padding: 12px;
+  }
+
+  .welcome-card {
+    width: min(100%, 460px);
+    max-height: calc(100vh - 24px);
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+    border-radius: 16px;
+  }
+
+  .welcome-portrait {
+    min-height: 190px;
+  }
+
+  .welcome-portrait img {
+    object-position: 52% 37%;
+  }
+
+  .welcome-portrait-label {
+    right: 18px;
+    bottom: 15px;
+    left: 18px;
+  }
+
+  .welcome-content {
+    padding: 35px 24px 26px;
+  }
+
+  .welcome-content h2 {
+    margin-bottom: 14px;
+    font-size: 44px;
+  }
+
+  .welcome-message {
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+
+  .welcome-signoff {
+    margin-bottom: 22px;
+  }
+
+  .welcome-action {
+    width: 100%;
+  }
+
   .home-nav,
   .home-grid,
   .home-footer,

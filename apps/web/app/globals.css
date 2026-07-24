@@ -1,40 +1,47 @@
 :root {
-  --bg: #ffffff;
-  --surface: #f6f5f4;
-  --surface-warm: #f6f5f4;
-  --fg: rgba(0, 0, 0, 0.95);
-  --fg-2: #31302e;
-  --muted: #615d59;
-  --meta: #a39e98;
-  --border: rgba(0, 0, 0, 0.1);
-  --border-soft: rgba(0, 0, 0, 0.06);
-  --accent: #0075de;
-  --accent-on: #ffffff;
-  --accent-hover: #005bab;
-  --success: #1aae39;
-  --warn: #dd5b00;
-  --danger: #dc2626;
-  --profile-1: #0075de;
-  --profile-2: #6940a5;
-  --profile-3: #d9730d;
-  --profile-4: #ad1a72;
-  --profile-5: #0f7b6c;
-  --profile-6: #9f6b53;
+  --cactus-deep: #1a535c;
+  --cactus-mint: #4ecdc4;
+  --cactus-cream: #f7fff7;
+  --cactus-coral: #ff6b6b;
+  --cactus-sun: #ffe66d;
+  --bg: var(--cactus-cream);
+  --surface: color-mix(in oklab, var(--cactus-cream), white 48%);
+  --surface-warm: color-mix(in oklab, var(--cactus-sun), var(--cactus-cream) 88%);
+  --fg: var(--cactus-deep);
+  --fg-2: color-mix(in oklab, var(--cactus-deep), var(--cactus-cream) 14%);
+  --muted: color-mix(in oklab, var(--cactus-deep), var(--cactus-cream) 36%);
+  --meta: color-mix(in oklab, var(--cactus-deep), var(--cactus-cream) 55%);
+  --border: color-mix(in oklab, var(--cactus-deep), transparent 84%);
+  --border-soft: color-mix(in oklab, var(--cactus-deep), transparent 91%);
+  --accent: var(--cactus-deep);
+  --accent-on: var(--cactus-cream);
+  --accent-hover: color-mix(in oklab, var(--cactus-deep), var(--cactus-mint) 22%);
+  --success: color-mix(in srgb, var(--cactus-mint) 35%, var(--cactus-deep));
+  --success-fill: var(--cactus-mint);
+  --warn: color-mix(in srgb, var(--cactus-sun) 25%, var(--cactus-deep));
+  --warn-fill: var(--cactus-sun);
+  --danger: color-mix(in srgb, var(--cactus-coral) 60%, var(--cactus-deep));
+  --profile-1: var(--cactus-deep);
+  --profile-2: var(--cactus-mint);
+  --profile-3: var(--cactus-coral);
+  --profile-4: color-mix(in oklab, var(--cactus-sun), var(--cactus-deep) 22%);
+  --profile-5: color-mix(in oklab, var(--cactus-mint), var(--cactus-deep) 45%);
+  --profile-6: color-mix(in oklab, var(--cactus-coral), var(--cactus-deep) 35%);
   --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   --font-mono: "SF Mono", ui-monospace, Menlo, monospace;
-  --focus-ring: 0 0 0 3px rgba(9, 127, 232, 0.3);
+  --focus-ring: 0 0 0 3px color-mix(in oklab, var(--cactus-mint), transparent 48%);
   --elev-raised:
-    rgba(0, 0, 0, 0.04) 0 4px 18px,
-    rgba(0, 0, 0, 0.027) 0 2px 7.85px,
-    rgba(0, 0, 0, 0.02) 0 0.8px 2.93px,
-    rgba(0, 0, 0, 0.01) 0 0.175px 1.04px;
-  --glass: rgba(255, 255, 255, 0.76);
-  --glass-border: rgba(255, 255, 255, 0.72);
+    color-mix(in oklab, var(--cactus-deep), transparent 94%) 0 4px 18px,
+    color-mix(in oklab, var(--cactus-deep), transparent 96%) 0 2px 7.85px,
+    color-mix(in oklab, var(--cactus-deep), transparent 97%) 0 0.8px 2.93px,
+    color-mix(in oklab, var(--cactus-deep), transparent 98%) 0 0.175px 1.04px;
+  --glass: color-mix(in oklab, var(--cactus-cream), transparent 18%);
+  --glass-border: color-mix(in oklab, var(--cactus-cream), white 45%);
   --glass-shadow:
-    rgba(0, 0, 0, 0.08) 0 18px 45px,
-    rgba(0, 0, 0, 0.04) 0 2px 8px,
-    rgba(0, 0, 0, 0.08) 0 0 0 1px;
+    color-mix(in oklab, var(--cactus-deep), transparent 88%) 0 18px 45px,
+    color-mix(in oklab, var(--cactus-deep), transparent 94%) 0 2px 8px,
+    color-mix(in oklab, var(--cactus-deep), transparent 90%) 0 0 0 1px;
   --motion-fast: 150ms;
   --motion-base: 200ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
@@ -562,8 +569,8 @@ p {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--success);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--success), transparent 86%);
+  background: var(--success-fill);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--success-fill), transparent 78%);
 }
 
 .person-a .online-label i {
@@ -586,8 +593,8 @@ p {
 
 .live-demo[data-stage="joined"] .person-b .online-label i,
 .live-demo[data-stage="typing"] .person-b .online-label i {
-  background: var(--success);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--success), transparent 86%);
+  background: var(--success-fill);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--success-fill), transparent 78%);
   animation: online-pulse 1.9s ease-in-out infinite;
 }
 
@@ -611,7 +618,7 @@ p {
   width: 100%;
   height: 100%;
   transform: translateX(-100%);
-  background: var(--success);
+  background: var(--success-fill);
   content: "";
   transition: transform 500ms var(--ease-standard);
 }
@@ -1202,10 +1209,10 @@ p {
 @keyframes online-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 3px color-mix(in oklab, var(--success), transparent 88%);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--success-fill), transparent 78%);
   }
   50% {
-    box-shadow: 0 0 0 6px color-mix(in oklab, var(--success), transparent 96%);
+    box-shadow: 0 0 0 6px color-mix(in oklab, var(--success-fill), transparent 90%);
   }
 }
 
@@ -1377,13 +1384,14 @@ p {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--success);
-  box-shadow: 0 0 0 4px color-mix(in oklab, var(--success), transparent 89%);
+  background: var(--success-fill);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--success-fill), transparent 82%);
 }
 
 .status-offline i,
 .status-reconnecting i {
-  background: var(--warn);
+  background: var(--warn-fill);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--warn-fill), transparent 78%);
 }
 
 .status-saving i,
@@ -1515,7 +1523,7 @@ p {
   height: 6px;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: var(--success);
+  background: var(--success-fill);
 }
 
 .people-list {
@@ -1894,11 +1902,11 @@ p {
 .danger-button {
   border-color: var(--danger);
   background: var(--danger);
-  color: var(--bg);
+  color: var(--cactus-cream);
 }
 
 .danger-button:hover {
-  background: color-mix(in oklab, var(--danger), black 10%);
+  background: color-mix(in oklab, var(--danger), var(--cactus-deep) 16%);
 }
 
 .error-toast {

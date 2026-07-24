@@ -925,7 +925,7 @@ p {
 .mode-choice {
   display: grid;
   min-height: 94px;
-  grid-template-columns: 18px 78px minmax(0, 1fr);
+  grid-template-columns: 18px 22px 78px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
   border: 1px solid var(--border);
@@ -2078,7 +2078,7 @@ p {
 
   .mode-choice {
     min-height: 86px;
-    grid-template-columns: 16px 68px minmax(0, 1fr);
+    grid-template-columns: 16px 18px 62px minmax(0, 1fr);
     gap: 9px;
     padding: 13px;
   }

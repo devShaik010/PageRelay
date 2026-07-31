@@ -51,6 +51,6 @@
     "@base-ui/react": "^1.6.0",
     "@types/lodash.throttle": "^4.1.9",
     "class-variance-authority": "^0.7.1",
-    "sass": "^1.101.7"
+    "sass": "^1.102.0"
   }
 }
